@@ -63,7 +63,7 @@ namespace
     HKEY driveFusionKey;
     if (RegOpenKeyEx(
             HKEY_CURRENT_USER,
-            L"Software\\Google\\Drive Fusion",
+            L"Software\\Google\\Google Drive Shell Extension",
             0,
             KEY_QUERY_VALUE,
             &driveFusionKey) != ERROR_SUCCESS)

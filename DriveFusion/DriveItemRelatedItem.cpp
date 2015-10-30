@@ -156,7 +156,15 @@ STDMETHODIMP CDriveItemRelatedItem::Unadvise(DWORD dwCookie)
   return S_OK;
 }
 
-STDMETHODIMP CDriveItemRelatedItem::CreateItem(__in  LPCWSTR pszName, __in  DWORD dwAttributes, __in  ULONGLONG ullSize, __in  TRANSFER_SOURCE_FLAGS flags, __in  REFIID riidItem, __deref_out  void **ppvItem, __in  REFIID riidResources, __deref_out  void **ppvResources)
+STDMETHODIMP CDriveItemRelatedItem::CreateItem(
+    __in  LPCWSTR pszName,
+    __in  DWORD dwAttributes,
+    __in  ULONGLONG ullSize,
+    __in  TRANSFER_SOURCE_FLAGS flags,
+    __in  REFIID riidItem,
+    __deref_out void **ppvItem,
+    __in  REFIID riidResources,
+    __deref_out  void **ppvResources)
 {
   Log::WriteOutput(LogType::Debug, L"CDriveItemRelatedItem::CreateItem()");
 
@@ -179,64 +187,41 @@ STDMETHODIMP CDriveItemRelatedItem::CreateItem(__in  LPCWSTR pszName, __in  DWOR
   options.grfFlags = BIND_MAYBOTHERUSER;
   options.grfMode = STGM_CREATE;
 
-  HRESULT hr = CreateBindCtx(0, &pbc);
+  HRESULT hr = S_OK;
+  
+  CHECK_HR(CreateBindCtx(0, &pbc));
+  CHECK_HR(pbc->SetBindOptions(&options));
 
-  if (SUCCEEDED(hr))
+  WCHAR name[MAX_PATH];
+  CHECK_HR(StringCchCopy(name, MAX_PATH, pszName));
+  hr = _gDriveShlExt->ParseDisplayName(NULL, pbc, name, NULL, &childpidl, &dwAttributes); // create a new file at google
+  if (hr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS) && ((flags & TSF_OVERWRITE_EXIST) == TSF_OVERWRITE_EXIST))
   {
-    hr = pbc->SetBindOptions(&options);
-
-    if (SUCCEEDED(hr))
-    {
-      WCHAR name[MAX_PATH];
-      hr = StringCchCopy(name, MAX_PATH, pszName);
-
-      if (SUCCEEDED(hr))
-      {
-        hr = _gDriveShlExt->ParseDisplayName(NULL, pbc, name, NULL, &childpidl, &dwAttributes); // create a new file at google
-
-        if (((flags & TSF_OVERWRITE_EXIST) == TSF_OVERWRITE_EXIST) && hr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS))
-        {
-          hr = _gDriveShlExt->ParseDisplayName(NULL, NULL, name, NULL, &childpidl, &dwAttributes); // get the existing file
-        }
-
-        if (SUCCEEDED(hr))
-        {
-          if (riidItem == IID_IShellItem)
-          {
-            CComPtr<IIdentityName> idName;
-
-            hr = _gDriveShlExt->BindToObject(childpidl, NULL, IID_PPV_ARGS(&idName)); // returns an instance of CDriveItemRelatedItem
-
-            if (SUCCEEDED(hr))
-            {
-              CComPtr<IShellItem> shellItem;
-
-              hr = idName->GetItem(&shellItem);
-
-              if (SUCCEEDED(hr))
-              {
-                hr = shellItem->QueryInterface(riidItem, ppvItem);
-
-                if (SUCCEEDED(hr))
-                {
-                  hr = idName->QueryInterface(riidResources, ppvResources); // this works cause I know idName is an instance of CDriveItemRelatedItem, which also impliments IShellItemResources
-                }
-
-                shellItem.Release();
-              }
-              idName.Release();
-            }
-          }
-          else
-          {
-            Log::LogUnknownIID(riidItem, L"CDriveItemRelatedItem::CreateItem()");
-            hr = E_INVALIDARG;
-          }
-        }
-      }
-    }
-    pbc.Release();
+    hr = _gDriveShlExt->ParseDisplayName(NULL, NULL, name, NULL, &childpidl, &dwAttributes); // get the existing file
   }
+  CHECK_HR(hr);
+  CHECK_HR(_gDriveShlExt->GetAttributesOf(1, (LPCITEMIDLIST*)&(childpidl.m_pData), &dwAttributes));
+
+  if (riidItem == IID_IShellItem)
+  {
+    CComPtr<IIdentityName> idName;
+    CHECK_HR(_gDriveShlExt->BindToObject(childpidl, NULL, IID_PPV_ARGS(&idName))); // returns an instance of CDriveItemRelatedItem
+
+    CComPtr<IShellItem> shellItem;
+    CHECK_HR(idName->GetItem(&shellItem));
+    CHECK_HR(shellItem->QueryInterface(riidItem, ppvItem));
+
+    hr = idName->QueryInterface(riidResources, ppvResources); // this works cause I know idName is an instance of CDriveItemRelatedItem, which also impliments IShellItemResources
+
+    shellItem.Release();
+    idName.Release();
+  }
+  else
+  {
+    Log::LogUnknownIID(riidItem, L"CDriveItemRelatedItem::CreateItem()");
+    hr = E_INVALIDARG;
+  }
+  pbc.Release();
 
   return hr;
 }
