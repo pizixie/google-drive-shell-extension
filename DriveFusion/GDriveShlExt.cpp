@@ -2366,8 +2366,6 @@ STDMETHODIMP CGDriveShlExt::ParseDisplayName(HWND hwnd, __in IBindCtx *pbc, __in
             // We found a matching entry, but they want to create a new item
             // with the same name, this we will not allow, so fail it out.
             HRESULT_FROM_WIN32(ERROR_FILE_EXISTS)); 
-        CHECK_TRUE((options.grfFlags & BIND_JUSTTESTEXISTENCE) == 0,
-            HRESULT_FROM_WIN32(ERROR_FILE_EXISTS));
         
         CIdList outPidl;
         CHECK_HR(CIdList::Clone(ppidlOfChild, outPidl));
@@ -2469,9 +2467,9 @@ HRESULT CGDriveShlExt::_NextNameSegment(__inout std::wstring& ppszInOut, __out s
 
       if (child->Title.compare(ppszSegment) == 0) // Should this be case insensitive?  Windows doesn't allow it but Google does
       {
-        if (pdwAttributes != NULL)
+        CHECK_HR(_CreateItemID(child, ppidlOut));
+        if (pdwAttributes != nullptr)
         {
-          CHECK_HR(_CreateItemID(child, ppidlOut));
           DWORD dwMask = 0;
           CHECK_HR(_GetAttributesOf(child, &dwMask));
           *pdwAttributes = *pdwAttributes & dwMask;
