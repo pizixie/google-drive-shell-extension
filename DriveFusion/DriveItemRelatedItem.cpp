@@ -509,7 +509,7 @@ STDMETHODIMP CDriveItemRelatedItem::OpenResource(__RPC__in const SHELL_ITEM_RESO
 
     if (SUCCEEDED(hr))
     {
-      if (riid == IID_IUnknown)
+      if (riid == IID_IUnknown || riid == IID_IStream)
       {
         BIND_OPTS options;
         ZeroMemory(&options, sizeof(BIND_OPTS));
@@ -548,7 +548,7 @@ STDMETHODIMP CDriveItemRelatedItem::CreateResource(__RPC__in const SHELL_ITEM_RE
 
     if (SUCCEEDED(hr))
     {
-      if (riid == IID_IUnknown)
+      if (riid == IID_IUnknown || riid == IID_IStream)
       {
         BIND_OPTS options;
         ZeroMemory(&options, sizeof(BIND_OPTS));
