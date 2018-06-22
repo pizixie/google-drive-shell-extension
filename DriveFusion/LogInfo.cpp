@@ -21,7 +21,7 @@ using namespace Fusion::GoogleDrive;
 LogInfo::LogInfo(void)
 {
   LogLevel = 0;
-  LocalGoogleDriveData = L"C:\\";
+  LocalGoogleDriveData = L"C:\\ProgramData";
 }
 
 LogInfo::~LogInfo(void)
